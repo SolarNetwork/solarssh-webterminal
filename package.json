@@ -64,11 +64,15 @@
   "dependencies": {
     "@popperjs/core": "^2.11.8",
     "@xterm/addon-attach": "^0.11.0",
+    "@xterm/addon-canvas": "^0.7.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.13.1",
     "jquery": "^3.7.1",
-    "solarnetwork-api-core": "SolarNetwork/sn-api-core-js#feature/solarssh"
+    "solarnetwork-api-core": "SolarNetwork/sn-api-core-js#feature/solarssh",
+    "xterm-webfont": "^2.0.0"
   },
   "devDependencies": {
     "@ava/typescript": "^5.0.0",

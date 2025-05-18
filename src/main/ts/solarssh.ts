@@ -15,10 +15,19 @@ import {
 import { urlQueryParse } from "solarnetwork-api-core/lib/net/urls";
 import { Configuration } from "solarnetwork-api-core/lib/util";
 import { NodeCredentialsFormElements, SnSettingsFormElements } from "./forms";
-import { AnsiEscapes, termEscapedText } from "./utils";
-import { Terminal } from "@xterm/xterm";
+import { AnsiEscapes, termEscapedText, TerminalTheme } from "./utils";
+import {
+	ITerminalInitOnlyOptions,
+	ITerminalOptions,
+	Terminal,
+} from "@xterm/xterm";
 import { AttachAddon } from "@xterm/addon-attach";
+import { CanvasAddon } from "@xterm/addon-canvas";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebglAddon } from "@xterm/addon-webgl";
+import * as XtermWebfont from "xterm-webfont";
 
+const fitAddon = new FitAddon();
 export default class SolarSshApp {
 	readonly config: Configuration;
 
@@ -70,18 +79,31 @@ export default class SolarSshApp {
 
 		this.#solarSshApi = new SolarSshApi();
 		this.#termSettings = new SshTerminalSettings(
-			this.config.value("cols") || 100,
+			//this.config.value("cols") || 100,
 			this.config.value("lines") || 24
 		);
 
-		var opts: any = {
+		const opts: ITerminalOptions & ITerminalInitOnlyOptions = {
 			tabStopWidth: 4,
+			fontFamily: "Source Code Pro, Menlo, Roboto Mono, monospace",
+			theme: TerminalTheme,
 		};
 		if (this.#termSettings.cols > 0 && this.#termSettings.lines > 0) {
-			opts.cols = this.#termSettings.cols;
+			//opts.cols = this.#termSettings.cols;
 			opts.rows = this.#termSettings.lines;
 		}
 		this.#terminal = new Terminal(opts);
+		this.#terminal.loadAddon(fitAddon);
+		this.#terminal.loadAddon(new CanvasAddon());
+		try {
+			const webgl = new WebglAddon();
+			webgl.onContextLoss(() => {
+				webgl.dispose();
+			});
+			this.#terminal.loadAddon(webgl);
+		} catch (e) {
+			console.warn("WebGL addon threw an exception during load", e);
+		}
 
 		this.#connectBtn = $("#connect");
 		this.#disconnectBtn = $("#disconnect");
@@ -105,6 +127,7 @@ export default class SolarSshApp {
 
 	start(): ThisType<SolarSshApp> {
 		this.#terminal.open(document.getElementById("terminal")!);
+		fitAddon.fit();
 
 		this.#connectBtn.on("click", () => this.#connect());
 		this.#disconnectBtn.on("click", () => this.#disconnect());
@@ -335,7 +358,7 @@ export default class SolarSshApp {
 		this.#setConnectDisabled(true);
 		this.#setDisconnectDisabled(true);
 		const nodeId = this.#nodeId();
-		this.#terminal.write("Creating new SSH session...");
+		this.#terminal.write("Creating new session...");
 		this.#executeWithAuthorization(
 			HttpMethod.GET,
 			this.#solarSshApi.createSshSessionUrl(nodeId),
@@ -355,9 +378,7 @@ export default class SolarSshApp {
 				let session = this.#saveSessionJson(json.data)!;
 				console.info("Created session %s", session.sessionId);
 				// start the session now
-				this.#terminal.write(
-					"Requesting SolarNode to establish remote SSH session... "
-				);
+				this.#terminal.write("Requesting SolarNode to connect... ");
 				return this.#executeWithAuthorization(
 					HttpMethod.GET,
 					this.#solarSshApi.startSshSessionUrl(session.sessionId),
@@ -401,9 +422,7 @@ export default class SolarSshApp {
 		if (!session) {
 			return;
 		}
-		this.#terminal.write(
-			"Requesting SolarNode to stop remote SSH session... "
-		);
+		this.#terminal.write("Requesting SolarNode to disconnect... ");
 		this.#executeWithAuthorization(
 			HttpMethod.GET,
 			this.#solarSshApi.stopSshSessionUrl(session.sessionId),
@@ -419,9 +438,16 @@ export default class SolarSshApp {
 				this.#termWriteFailed();
 			})
 			.finally(() => {
-				setTimeout(() => {
-					this.#reset();
-				}, 1000);
+				this.#terminal.writeln("");
+				this.#terminal.writeln(
+					"Session ended. Start another by clicking the " +
+						termEscapedText(
+							AnsiEscapes.color.bright.blue,
+							"Connect"
+						) +
+						" button."
+				);
+				this.#reset();
 			});
 	}
 
@@ -433,11 +459,13 @@ export default class SolarSshApp {
 		}
 	}
 
-	#reset() {
+	#reset(clear?: boolean) {
 		this.#resetWebSocket();
 		this.#sshSession = undefined;
-		this.#terminal.clear();
-		this.#termWriteGreeting();
+		if (clear) {
+			this.#terminal.clear();
+			this.#termWriteGreeting();
+		}
 		this.#setConnectDisabled(false);
 		this.#setDisconnectDisabled(true);
 		this.#setSshSessionEstablished(false);
@@ -447,9 +475,7 @@ export default class SolarSshApp {
 	}
 
 	#waitForStartRemoteSsh(session: SshSession) {
-		this.#terminal.write(
-			"Waiting for SolarNode to establish remote SSH session..."
-		);
+		this.#terminal.write("Waiting for SolarNode to connect...");
 		const url = this.#solarSshApi.viewStartRemoteSshInstructionUrl(session);
 		const executeQuery = () => {
 			var auth =
