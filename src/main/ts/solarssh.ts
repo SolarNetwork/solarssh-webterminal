@@ -14,30 +14,36 @@ import {
 } from "solarnetwork-api-core/net";
 import { urlQueryParse } from "solarnetwork-api-core/lib/net/urls";
 import { Configuration } from "solarnetwork-api-core/lib/util";
-import { SnSettingsFormElements } from "./forms";
+import { NodeCredentialsFormElements, SnSettingsFormElements } from "./forms";
 import { AnsiEscapes, termEscapedText } from "./utils";
 import { Terminal } from "@xterm/xterm";
 import { AttachAddon } from "@xterm/addon-attach";
 
 export default class SolarSshApp {
 	readonly config: Configuration;
+
 	readonly snSettingsForm: HTMLFormElement;
 	readonly snSettingsElements: SnSettingsFormElements;
 
 	readonly #terminal: Terminal;
 	readonly #solarSshApi: SolarSshApi;
 	readonly #termSettings;
-	readonly #nodeCredentialsModal: Modal;
 	readonly #connectBtn: JQuery<HTMLButtonElement>;
 	readonly #disconnectBtn: JQuery<HTMLButtonElement>;
 	readonly #proxyBtn: JQuery<HTMLButtonElement>;
 	readonly #cliBtn: JQuery<HTMLButtonElement>;
+
+	readonly #nodeCredentialsForm: HTMLFormElement;
+	readonly #nodeCredentialsElements: NodeCredentialsFormElements;
+	readonly #nodeCredentialsModal: Modal;
+	readonly #nodeCredentialsLoginBtn: JQuery<HTMLButtonElement>;
 
 	#sshSession?: SshSession;
 	#sshSessionEstablished: boolean = false;
 	#socket?: WebSocket;
 	#attachAddon?: any;
 	#credChangeTimeout?: number;
+	#nodeCredChangeTimeout?: number;
 	#connectDisabled: boolean = false;
 	#disconnectDisabled: boolean = true;
 
@@ -77,11 +83,24 @@ export default class SolarSshApp {
 		}
 		this.#terminal = new Terminal(opts);
 
-		this.#nodeCredentialsModal = new Modal("#node-credentials");
 		this.#connectBtn = $("#connect");
 		this.#disconnectBtn = $("#disconnect");
 		this.#proxyBtn = $("#http-proxy");
 		this.#cliBtn = $("#cli");
+
+		this.#nodeCredentialsModal = new Modal("#node-credentials");
+
+		this.#nodeCredentialsForm =
+			document.querySelector<HTMLFormElement>("#node-credentials")!;
+		this.#nodeCredentialsElements = this.#nodeCredentialsForm
+			.elements as unknown as NodeCredentialsFormElements;
+
+		this.#nodeCredentialsForm.addEventListener("hidden.bs.modal", () => {
+			this.#nodeCredentialsForm.reset();
+			this.#nodeCredBtnUpdateState();
+		});
+
+		this.#nodeCredentialsLoginBtn = $("#cli-login");
 	}
 
 	start(): ThisType<SolarSshApp> {
@@ -89,6 +108,7 @@ export default class SolarSshApp {
 
 		this.#connectBtn.on("click", () => this.#connect());
 		this.#disconnectBtn.on("click", () => this.#disconnect());
+		this.#cliBtn.on("click", () => this.#nodeCredentialsModal.show());
 
 		for (let field of [
 			this.snSettingsElements.nodeId,
@@ -103,6 +123,23 @@ export default class SolarSshApp {
 				clearTimeout(this.#credChangeTimeout);
 				this.#credChangeTimeout = setTimeout(
 					() => this.#connectBtnUpdateState(),
+					200
+				);
+			});
+		}
+
+		for (let field of [
+			this.#nodeCredentialsElements.username,
+			this.#nodeCredentialsElements.password,
+		]) {
+			field.addEventListener("change", () => {
+				clearTimeout(this.#nodeCredChangeTimeout);
+				this.#nodeCredBtnUpdateState();
+			});
+			field.addEventListener("keyup", () => {
+				clearTimeout(this.#nodeCredChangeTimeout);
+				this.#nodeCredChangeTimeout = setTimeout(
+					() => this.#nodeCredBtnUpdateState(),
 					200
 				);
 			});
@@ -228,7 +265,7 @@ export default class SolarSshApp {
 	#cliBtnUpdateState() {
 		const disabled =
 			!this.#sshSessionEstablished ||
-			(this.#socket &&
+			(!!this.#socket &&
 				(this.#socket.readyState === WebSocket.CONNECTING ||
 					this.#socket.readyState === WebSocket.OPEN));
 		this.#cliBtn.prop("disabled", disabled);
@@ -403,8 +440,7 @@ export default class SolarSshApp {
 		this.#termWriteGreeting();
 		this.#setConnectDisabled(false);
 		this.#setDisconnectDisabled(true);
-		this.#cliBtnUpdateState();
-		this.#proxyBtnUpdateState();
+		this.#setSshSessionEstablished(false);
 		if (this.#setupGuiWindow) {
 			this.#setupGuiWindow = undefined;
 		}
@@ -476,5 +512,17 @@ export default class SolarSshApp {
 
 		// add an initial delay of a small amount, to give MQTT based connections time to establish themselves
 		setTimeout(() => executeQuery(), 4000);
+	}
+
+	#nodeCredBtnUpdateState() {
+		const disabled = !(
+			this.#nodeCredentialsElements.username.value &&
+			this.#nodeCredentialsElements.password.value
+		);
+		this.#nodeCredentialsLoginBtn.prop("disabled", disabled);
+	}
+
+	#cliStart() {
+		this.#nodeCredentialsModal.show();
 	}
 }

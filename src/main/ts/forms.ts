@@ -3,3 +3,9 @@ export interface SnSettingsFormElements extends HTMLFormControlsCollection {
 	token: HTMLInputElement;
 	secret: HTMLInputElement;
 }
+
+export interface NodeCredentialsFormElements
+	extends HTMLFormControlsCollection {
+	username: HTMLInputElement;
+	password: HTMLInputElement;
+}
