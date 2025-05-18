@@ -70,7 +70,7 @@ export default class SolarSshApp {
 	#connectDisabled: boolean = false;
 	#disconnectDisabled: boolean = true;
 
-	#guiWindow?: WindowProxy;
+	#guiWindow?: WindowProxy | null;
 
 	/**
 	 * Constructor.
