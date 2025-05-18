@@ -19,7 +19,7 @@
   },
   "type": "module",
   "engines": {
-    "node": ">=18.18"
+    "node": ">=20.19"
   },
   "scripts": {
     "dev": "vite",
@@ -71,7 +71,7 @@
     "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.13.1",
     "jquery": "^3.7.1",
-    "solarnetwork-api-core": "SolarNetwork/sn-api-core-js#feature/solarssh",
+    "solarnetwork-api-core": "^3.3.0",
     "xterm-webfont": "^2.0.0"
   },
   "devDependencies": {

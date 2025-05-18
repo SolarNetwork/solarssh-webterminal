@@ -43,7 +43,7 @@ For example, to control node ID 123 with a 48-line high terminal, you'd use URL 
 # Building from source
 
 To build yourself, clone or download this repository. You need to have
-Node 20+ installed. Then:
+Node 20.19+ installed. Then:
 
 ```sh
 # initialize dependencies
