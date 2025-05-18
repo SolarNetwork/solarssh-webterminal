@@ -1,0 +1,130 @@
+{
+  "name": "solarssh-webterminal",
+  "version": "2.0.0",
+  "description": "SolarSSH Web Terminal",
+  "keywords": [
+    "solarnetwork",
+    "solarssh",
+    "solarnode"
+  ],
+  "homepage": "https://github.com/SolarNetwork/solarssh-webterminal",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Matt Magoffin",
+    "email": "matt@solarnetwork.net"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SolarNetwork/solarssh-webterminal.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "release": "generate-release --current-version \"$(bin/remove-preid.cjs)\""
+  },
+  "ava": {
+    "files": [
+      "src/test/ts/**/*"
+    ],
+    "typescript": {
+      "rewritePaths": {
+        "src/": "lib/"
+      },
+      "compile": "tsc"
+    }
+  },
+  "c8": {
+    "exclude": [
+      "src/test/ts/**"
+    ],
+    "exclude-after-remap": true,
+    "reporter": [
+      "text",
+      "html"
+    ]
+  },
+  "config": {
+    "generateRelease": {
+      "no_confirm": false,
+      "remote": "origin",
+      "pre_commit_commands": [
+        "npm run build"
+      ],
+      "post_complete_commands": [
+        "npmversion --increment prepatch --preid dev --nogit-tag"
+      ],
+      "files_to_commit": []
+    }
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "@xterm/addon-attach": "^0.11.0",
+    "@xterm/addon-canvas": "^0.7.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/xterm": "^5.5.0",
+    "bootstrap": "^5.3.6",
+    "bootstrap-icons": "^1.13.1",
+    "jquery": "^3.7.1",
+    "solarnetwork-api-core": "^3.3.0",
+    "xterm-webfont": "^2.0.0"
+  },
+  "devDependencies": {
+    "@ava/typescript": "^5.0.0",
+    "@types/bootstrap": "^5.2.10",
+    "@types/crypto-js": "^4.2.2",
+    "@types/jquery": "^3.5.32",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "ava": "^6.3.0",
+    "c8": "^10.1.3",
+    "eslint": "^9.27.0",
+    "generate-release": "^1.1.1",
+    "npmversion": "^2.0.5",
+    "sass": "^1.89.0",
+    "typedoc": "^0.28.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  },
+  "overrides": {
+    "json5": "2.2.3",
+    "lodash": "4.17.21",
+    "minimist": "1.2.8",
+    "postcss": "8.4.38",
+    "semver": "7.6.0"
+  },
+  "__dependencies": {
+    "d3-request": "^1.0.5",
+    "d3-selection": "^3.0.0",
+    "dialog-polyfill": "^0.5.0",
+    "solarnetwork-api-core": "^0.20.0",
+    "solarnetwork-api-ssh": "0.2",
+    "xterm": "^4.18.0",
+    "xterm-addon-attach": "^0.6.0"
+  },
+  "__devDependencies": {
+    "@babel/core": "^7.17.5",
+    "@babel/plugin-external-helpers": "^7.16.7",
+    "@babel/preset-env": "^7.16.11",
+    "babel-loader": "^8.2.3",
+    "babel-plugin-module-resolver": "^4.1.0",
+    "core-js": "^3.21.1",
+    "css-loader": "^5.2.7",
+    "exports-loader": "^2.0.0",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.5.0",
+    "ignore-loader": "^0.1.2",
+    "prettier": "^2.5.1",
+    "style-loader": "^2.0.0",
+    "terser-webpack-plugin": "^5.3.1",
+    "webpack": "^5.71.0",
+    "webpack-cli": "^4.7.2",
+    "webpack-dev-server": "^4.8.1",
+    "webpack-merge": "^5.8.0"
+  }
+}

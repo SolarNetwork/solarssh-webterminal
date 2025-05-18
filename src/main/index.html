@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link
+			rel="icon"
+			type="image/svg+xml"
+			href="img/solarnetwork-favicon.svg"
+		/>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400&display=swap"
+			rel="stylesheet"
+		/>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap"
+			rel="stylesheet"
+		/>
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, shrink-to-fit=no"
+		/>
+		<title>SolarNode Connect</title>
+	</head>
+	<body class="pt-5">
+		<nav class="navbar navbar-expand-lg fixed-top bg-body-tertiary">
+			<div class="container-fluid">
+				<a class="navbar-brand" href="#">SolarNode Connect</a>
+				<button
+					class="navbar-toggler"
+					type="button"
+					data-bs-toggle="collapse"
+					data-bs-target="#navbarSupportedContent"
+					aria-controls="navbarSupportedContent"
+					aria-expanded="false"
+					aria-label="Toggle navigation"
+				>
+					<span class="navbar-toggler-icon"></span>
+				</button>
+				<div
+					class="collapse navbar-collapse"
+					id="navbarSupportedContent"
+				>
+					<form class="d-flex me-auto" id="credentials">
+						<input
+							class="form-control form-control-sm me-2"
+							type="number"
+							name="nodeId"
+							min="1"
+							placeholder="Node ID"
+							aria-label="Node ID"
+							style="max-width: 6em"
+						/>
+						<input
+							class="form-control form-control-sm me-2"
+							type="text"
+							name="token"
+							autocomplete="off"
+							autocorrect="off"
+							autocapitalize="off"
+							spellcheck="false"
+							placeholder="Token"
+							aria-label="Token"
+							style="min-width: 12em"
+						/>
+						<input
+							class="form-control form-control-sm me-2"
+							type="password"
+							name="secret"
+							placeholder="Secret"
+							aria-label="Secret"
+							style="min-width: 12em"
+						/>
+						<button
+							class="btn btn-primary me-2"
+							type="button"
+							id="connect"
+							disabled
+						>
+							Connect</button
+						><button
+							class="btn btn-danger"
+							type="button"
+							id="disconnect"
+							disabled
+						>
+							End
+						</button>
+					</form>
+					<div>
+						<button
+							class="btn btn-warning me-2"
+							type="button"
+							id="cli"
+							disabled
+						>
+							CLI
+						</button>
+						<button
+							class="btn btn-warning"
+							type="button"
+							id="http-proxy"
+							disabled
+						>
+							GUI
+						</button>
+					</div>
+				</div>
+			</div>
+		</nav>
+		<div class="container py-3 px-3 mx-auto">
+			<div class="row">
+				<div class="col-sm-12" id="terminal"></div>
+			</div>
+		</div>
+		<footer
+			id="app-version"
+			class="d-none text-secondary-emphasis m-3 text-end"
+			aria-hidden="true"
+		>
+			<small
+				>Version <span class="data-app-version"></span>. Source on
+				<a
+					href="https://github.com/SolarNetwork/solarssh-webterminal"
+					class="link-body-emphasis"
+					target="_blank"
+					>GitHub</a
+				>.</small
+			>
+		</footer>
+		<form
+			class="modal fade"
+			tabindex="-1"
+			id="node-credentials"
+			data-bs-backdrop="static"
+			data-bs-keyboard="false"
+		>
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">
+							SolarNode OS Login Credentials
+						</h5>
+						<button
+							type="button"
+							class="btn-close"
+							data-bs-dismiss="modal"
+							aria-label="Close"
+						></button>
+					</div>
+					<div class="modal-body">
+						<p>
+							Enter your SolarNode OS login credentials to connect
+							to the node CLI.
+						</p>
+						<div class="mb-3">
+							<label for="node-username" class="form-label"
+								>OS Username</label
+							>
+							<input
+								name="username"
+								type="text"
+								class="form-control"
+								id="node-username"
+								value="solar"
+							/>
+						</div>
+						<div class="mb-3">
+							<label for="node-password" class="form-label"
+								>OS Password</label
+							>
+							<input
+								name="password"
+								type="password"
+								class="form-control"
+								id="node-password"
+							/>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button
+							type="button"
+							class="btn btn-secondary"
+							data-bs-dismiss="modal"
+						>
+							Cancel
+						</button>
+						<button
+							id="cli-login"
+							type="submit"
+							class="btn btn-primary"
+							disabled
+						>
+							Login
+						</button>
+					</div>
+				</div>
+			</div>
+		</form>
+		<script type="module" src="ts/main.ts"></script>
+	</body>
+</html>
