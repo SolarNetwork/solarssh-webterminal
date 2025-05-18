@@ -59,3 +59,4 @@ npm run build
 Running the `build` script will generate the application into the `dist/` directory.
 
 [npm]: https://www.npmjs.com/
+[solarssh]: https://github.com/SolarNetwork/solarnetwork/wiki/SolarSSH-Guide
