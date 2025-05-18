@@ -28,6 +28,8 @@ import { CanvasAddon } from "@xterm/addon-canvas";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 
+const ACTION_BUTTON_ANSI_COLOR = AnsiEscapes.color.bright.yellow;
+
 const fitAddon = new FitAddon();
 
 window.addEventListener("resize", () => {
@@ -389,6 +391,7 @@ export default class SolarSshApp {
 		this.#setConnectDisabled(true);
 		this.#setDisconnectDisabled(true);
 		const nodeId = this.#nodeId();
+		this.#terminal.writeln("");
 		this.#terminal.write("Creating new session...");
 		this.#executeWithAuthorization(
 			HttpMethod.GET,
@@ -454,6 +457,7 @@ export default class SolarSshApp {
 			return;
 		}
 		this.#sshSessionEstablished = false;
+		this.#terminal.writeln("");
 		this.#terminal.write("Requesting SolarNode to disconnect... ");
 		this.#executeWithAuthorization(
 			HttpMethod.GET,
@@ -537,12 +541,12 @@ export default class SolarSshApp {
 						this.#terminal.writeln(
 							"Use the " +
 								termEscapedText(
-									AnsiEscapes.color.bright.cyan,
+									ACTION_BUTTON_ANSI_COLOR,
 									"CLI"
 								) +
 								" or " +
 								termEscapedText(
-									AnsiEscapes.color.bright.cyan,
+									ACTION_BUTTON_ANSI_COLOR,
 									"GUI"
 								) +
 								" buttons to interact with SolarNode."
@@ -592,7 +596,10 @@ export default class SolarSshApp {
 		};
 		this.#nodeCredentialsModal.hide();
 
-		this.#terminal.write("Logging in to SolarNode OS... ");
+		this.#terminal.writeln("");
+		this.#terminal.write(
+			"Logging in to SolarNode OS as user '" + creds.username + "'... "
+		);
 		const url = this.#solarSshApi.terminalWebSocketUrl(session.sessionId);
 		console.log(
 			"Establishing web socket connection to %s using %s protocol",
@@ -649,12 +656,12 @@ export default class SolarSshApp {
 				terminal.writeln("");
 				terminal.writeln(
 					"Use the " +
-						termEscapedText(AnsiEscapes.color.bright.cyan, "CLI") +
+						termEscapedText(ACTION_BUTTON_ANSI_COLOR, "CLI") +
 						" button to reconnect to the CLI."
 				);
 				terminal.writeln(
 					"The " +
-						termEscapedText(AnsiEscapes.color.bright.cyan, "GUI") +
+						termEscapedText(ACTION_BUTTON_ANSI_COLOR, "GUI") +
 						" button can still be used to view the SolarNode GUI."
 				);
 			}
