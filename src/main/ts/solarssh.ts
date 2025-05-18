@@ -44,8 +44,8 @@ const enum CliWebSocketState {
 export default class SolarSshApp {
 	readonly config: Configuration;
 
-	readonly snSettingsForm: HTMLFormElement;
-	readonly snSettingsElements: SnSettingsFormElements;
+	readonly #snSettingsForm: HTMLFormElement;
+	readonly #snSettingsElements: SnSettingsFormElements;
 
 	readonly #terminal: Terminal;
 	readonly #solarSshApi: SolarSshApi;
@@ -70,30 +70,26 @@ export default class SolarSshApp {
 	#connectDisabled: boolean = false;
 	#disconnectDisabled: boolean = true;
 
-	#setupGuiWindow?: any;
+	#guiWindow?: WindowProxy;
 
 	/**
 	 * Constructor.
 	 * @param queryParams query parameters from `window.location.search` for example
 	 */
 	constructor(queryParams: string) {
-		this.config = new Configuration(
-			Object.assign(
-				{
-					// TODO provide defaults
-				},
-				urlQueryParse(queryParams)
-			)
-		);
+		this.config = new Configuration(urlQueryParse(queryParams));
 
-		this.snSettingsForm =
+		this.#snSettingsForm =
 			document.querySelector<HTMLFormElement>("#credentials")!;
-		this.snSettingsElements = this.snSettingsForm
+		this.#snSettingsElements = this.#snSettingsForm
 			.elements as unknown as SnSettingsFormElements;
+
+		if (this.config.value("nodeId")) {
+			this.#snSettingsElements.nodeId.value = this.config.value("nodeId");
+		}
 
 		this.#solarSshApi = new SolarSshApi();
 		this.#termSettings = new SshTerminalSettings(
-			//this.config.value("cols") || 100,
 			this.config.value("lines") || 24
 		);
 
@@ -172,9 +168,9 @@ export default class SolarSshApp {
 		this.#cliBtn.on("click", () => this.#nodeCredentialsModal.show());
 
 		for (let field of [
-			this.snSettingsElements.nodeId,
-			this.snSettingsElements.token,
-			this.snSettingsElements.secret,
+			this.#snSettingsElements.nodeId,
+			this.#snSettingsElements.token,
+			this.#snSettingsElements.secret,
 		]) {
 			field.addEventListener("change", () => {
 				clearTimeout(this.#credChangeTimeout);
@@ -216,17 +212,17 @@ export default class SolarSshApp {
 	}
 
 	#nodeId(): number | undefined {
-		const val = this.snSettingsElements.nodeId.valueAsNumber;
+		const val = this.#snSettingsElements.nodeId.valueAsNumber;
 		return val || undefined;
 	}
 
 	#tokenId(): string | undefined {
-		const val = this.snSettingsElements.token.value;
+		const val = this.#snSettingsElements.token.value;
 		return val || undefined;
 	}
 
 	#tokenSecret(): string | undefined {
-		const val = this.snSettingsElements.secret.value;
+		const val = this.#snSettingsElements.secret.value;
 		return val || undefined;
 	}
 
@@ -300,9 +296,9 @@ export default class SolarSshApp {
 
 	#connectAllowed(): boolean {
 		const configValid = !!(
-			this.snSettingsElements.nodeId.value &&
-			this.snSettingsElements.token.value &&
-			this.snSettingsElements.secret.value
+			this.#snSettingsElements.nodeId.value &&
+			this.#snSettingsElements.token.value &&
+			this.#snSettingsElements.secret.value
 		);
 		// TODO: check for existing session
 		// && !activeSession
@@ -506,8 +502,8 @@ export default class SolarSshApp {
 		this.#setConnectDisabled(false);
 		this.#setDisconnectDisabled(true);
 		this.#setSshSessionEstablished(false);
-		if (this.#setupGuiWindow) {
-			this.#setupGuiWindow = undefined;
+		if (this.#guiWindow) {
+			this.#guiWindow = undefined;
 		}
 	}
 
@@ -718,14 +714,14 @@ export default class SolarSshApp {
 			return;
 		}
 		if (
-			this.#setupGuiWindow &&
-			!this.#setupGuiWindow.closed &&
+			this.#guiWindow &&
+			!this.#guiWindow.closed &&
 			this.#sshSessionEstablished
 		) {
-			this.#setupGuiWindow.location =
+			this.#guiWindow.location =
 				this.#solarSshApi.httpProxyUrl(sessionId);
 		} else {
-			this.#setupGuiWindow = window.open(
+			this.#guiWindow = window.open(
 				this.#solarSshApi.httpProxyUrl(sessionId)
 			);
 		}
