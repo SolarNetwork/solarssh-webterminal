@@ -112,9 +112,10 @@ export default class SolarSshApp {
 		this.#terminal.onResize((size) => {
 			this.#termSettings.cols = size.cols;
 			this.#termSettings.lines = size.rows;
+			/* Not finding way to tell server client new size yet...
 			if (this.#socketState == CliWebSocketState.Configured) {
 				this.#terminal.write("\x1B[8;" + size.rows + ";" + size.cols);
-			}
+			} */
 		});
 
 		this.#terminal.loadAddon(new CanvasAddon());
