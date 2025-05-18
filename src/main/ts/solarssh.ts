@@ -3,6 +3,7 @@ import { Modal } from "bootstrap";
 import {
 	InstructionStateNames,
 	SshCloseCodes,
+	SshCommand,
 	SshSession,
 	SshTerminalSettings,
 } from "solarnetwork-api-core/domain";
@@ -11,6 +12,7 @@ import {
 	HttpHeaders,
 	HttpMethod,
 	SolarSshApi,
+	SolarSshTerminalWebSocketSubProtocol,
 } from "solarnetwork-api-core/net";
 import { urlQueryParse } from "solarnetwork-api-core/lib/net/urls";
 import { Configuration } from "solarnetwork-api-core/lib/util";
@@ -25,9 +27,18 @@ import { AttachAddon } from "@xterm/addon-attach";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
-import * as XtermWebfont from "xterm-webfont";
 
 const fitAddon = new FitAddon();
+
+window.addEventListener("resize", () => {
+	fitAddon.fit();
+});
+
+const enum CliWebSocketState {
+	Unconfigured = 0,
+	Configured = 1,
+}
+
 export default class SolarSshApp {
 	readonly config: Configuration;
 
@@ -50,7 +61,8 @@ export default class SolarSshApp {
 	#sshSession?: SshSession;
 	#sshSessionEstablished: boolean = false;
 	#socket?: WebSocket;
-	#attachAddon?: any;
+	#socketState: CliWebSocketState = CliWebSocketState.Unconfigured;
+	#attachAddon?: AttachAddon;
 	#credChangeTimeout?: number;
 	#nodeCredChangeTimeout?: number;
 	#connectDisabled: boolean = false;
@@ -89,11 +101,20 @@ export default class SolarSshApp {
 			theme: TerminalTheme,
 		};
 		if (this.#termSettings.cols > 0 && this.#termSettings.lines > 0) {
-			//opts.cols = this.#termSettings.cols;
+			opts.cols = this.#termSettings.cols;
 			opts.rows = this.#termSettings.lines;
 		}
 		this.#terminal = new Terminal(opts);
+
 		this.#terminal.loadAddon(fitAddon);
+		this.#terminal.onResize((size) => {
+			this.#termSettings.cols = size.cols;
+			this.#termSettings.lines = size.rows;
+			if (this.#socketState == CliWebSocketState.Configured) {
+				this.#terminal.write("\x1B[8;" + size.rows + ";" + size.cols);
+			}
+		});
+
 		this.#terminal.loadAddon(new CanvasAddon());
 		try {
 			const webgl = new WebglAddon();
@@ -121,8 +142,22 @@ export default class SolarSshApp {
 			this.#nodeCredentialsForm.reset();
 			this.#nodeCredBtnUpdateState();
 		});
+		this.#nodeCredentialsForm.addEventListener("shown.bs.modal", () => {
+			if (!this.#nodeCredentialsElements.username.value) {
+				this.#nodeCredentialsElements.username.focus();
+			} else {
+				this.#nodeCredentialsElements.password.focus();
+			}
+		});
 
 		this.#nodeCredentialsLoginBtn = $("#cli-login");
+		this.#nodeCredentialsForm.addEventListener("submit", (evt) => {
+			evt.preventDefault();
+			this.#cliLogin();
+			return false;
+		});
+
+		this.#proxyBtn.on("click", () => this.#guiOpen());
 	}
 
 	start(): ThisType<SolarSshApp> {
@@ -286,11 +321,7 @@ export default class SolarSshApp {
 	}
 
 	#cliBtnUpdateState() {
-		const disabled =
-			!this.#sshSessionEstablished ||
-			(!!this.#socket &&
-				(this.#socket.readyState === WebSocket.CONNECTING ||
-					this.#socket.readyState === WebSocket.OPEN));
+		const disabled = !this.#sshSessionEstablished || !!this.#socket;
 		this.#cliBtn.prop("disabled", disabled);
 	}
 
@@ -422,6 +453,7 @@ export default class SolarSshApp {
 		if (!session) {
 			return;
 		}
+		this.#sshSessionEstablished = false;
 		this.#terminal.write("Requesting SolarNode to disconnect... ");
 		this.#executeWithAuthorization(
 			HttpMethod.GET,
@@ -454,9 +486,9 @@ export default class SolarSshApp {
 	#resetWebSocket() {
 		if (this.#socket) {
 			this.#socket.close();
-			this.#terminal.reset();
 			this.#socket = undefined;
 		}
+		this.#socketState = CliWebSocketState.Unconfigured;
 	}
 
 	#reset(clear?: boolean) {
@@ -548,7 +580,146 @@ export default class SolarSshApp {
 		this.#nodeCredentialsLoginBtn.prop("disabled", disabled);
 	}
 
-	#cliStart() {
-		this.#nodeCredentialsModal.show();
+	#cliLogin() {
+		const session = this.#sshSession;
+		if (!(this.#sshSessionEstablished && session)) {
+			return;
+		}
+
+		const creds: Record<string, any> = {
+			username: this.#nodeCredentialsElements.username.value,
+			password: this.#nodeCredentialsElements.password.value,
+		};
+		this.#nodeCredentialsModal.hide();
+
+		this.#terminal.write("Logging in to SolarNode OS... ");
+		const url = this.#solarSshApi.terminalWebSocketUrl(session.sessionId);
+		console.log(
+			"Establishing web socket connection to %s using %s protocol",
+			url,
+			SolarSshTerminalWebSocketSubProtocol
+		);
+
+		const socket = new WebSocket(url, SolarSshTerminalWebSocketSubProtocol);
+		this.#socket = socket;
+		socket.onopen = () => {
+			const auth = this.#solarSshApi.connectTerminalWebSocketAuthBuilder(
+				session.nodeId
+			);
+			auth.tokenId = this.#tokenId();
+			const msg = SshCommand.attachSshCommand(
+				auth.build(this.#tokenSecret()!),
+				auth.date(),
+				creds.username,
+				creds.password,
+				this.#termSettings
+			);
+
+			console.info(
+				"Authenticating web socket connection to node %d with username %s",
+				session.nodeId,
+				creds.username
+			);
+
+			// clear saved password
+			delete creds.password;
+
+			socket.send(msg.toJsonEncoding());
+		};
+		socket.onerror = (evt) => {
+			console.error("Web socket error event: %s", JSON.stringify(evt));
+		};
+		socket.onmessage = (evt) => this.#webSocketMessage(evt);
+		socket.onclose = (evt) => this.#webSocketClose(evt);
+
+		this.#cliBtnUpdateState();
+	}
+
+	#webSocketClose(event: CloseEvent) {
+		console.debug(
+			"Web socket close event: code = %d; reason = %s",
+			event.code,
+			event.reason
+		);
+		this.#resetWebSocket();
+		const terminal = this.#terminal;
+		if (event.code === 1000) {
+			// CLOSE_NORMAL
+			if (terminal && this.#sshSessionEstablished) {
+				terminal.writeln("");
+				terminal.writeln(
+					"Use the " +
+						termEscapedText(AnsiEscapes.color.bright.cyan, "CLI") +
+						" button to reconnect to the CLI."
+				);
+				terminal.writeln(
+					"The " +
+						termEscapedText(AnsiEscapes.color.bright.cyan, "GUI") +
+						" button can still be used to view the SolarNode GUI."
+				);
+			}
+		} else if (event.code === SshCloseCodes.AuthenticationFailure.value) {
+			if (terminal) {
+				this.#termWriteFailed();
+				if (event.reason) {
+					this.#termWriteBrightRed(event.reason, true);
+				}
+			}
+		} else if (terminal) {
+			terminal.writeln("Connection closed: " + event.reason);
+		}
+		this.#attachAddon?.dispose();
+		this.#attachAddon = undefined;
+		this.#cliBtnUpdateState();
+	}
+
+	#webSocketMessage(event: MessageEvent<any>) {
+		var msg;
+		if (this.#socketState === CliWebSocketState.Configured) {
+			return;
+		}
+		try {
+			msg = JSON.parse(event.data);
+		} catch (e) {
+			console.debug(
+				"JSON parsing error [%s] on web socket event data %o",
+				e,
+				event.data
+			);
+		}
+		if (msg.success) {
+			this.#termWriteSuccess();
+			this.#terminal.writeln("");
+			this.#socketState = CliWebSocketState.Configured;
+			this.#attachAddon = new AttachAddon(this.#socket!);
+			this.#terminal.loadAddon(this.#attachAddon);
+			this.#terminal.focus();
+		} else {
+			this.#termWriteFailed();
+			this.#termWriteBrightRed(
+				"Failed to attach to SolarNode CLI: " + event.data,
+				true
+			);
+			this.#socket!.close();
+		}
+	}
+
+	#guiOpen() {
+		const sessionId = this.#sshSession?.sessionId;
+		if (!sessionId) {
+			return;
+		}
+		if (
+			this.#setupGuiWindow &&
+			!this.#setupGuiWindow.closed &&
+			this.#sshSessionEstablished
+		) {
+			this.#setupGuiWindow.location =
+				this.#solarSshApi.httpProxyUrl(sessionId);
+		} else {
+			this.#setupGuiWindow = window.open(
+				this.#solarSshApi.httpProxyUrl(sessionId)
+			);
+		}
 	}
 }
