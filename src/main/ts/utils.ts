@@ -27,6 +27,8 @@ export const AnsiEscapes = {
 			red: "\x1B[31;1m",
 			yellow: "\x1B[33;1m",
 			white: "\x1B[37;1m",
+			blue: "\x1B[34;1m",
+			cyan: "\x1B[36;1m",
 		},
 	},
 	reset: "\x1B[0m",
