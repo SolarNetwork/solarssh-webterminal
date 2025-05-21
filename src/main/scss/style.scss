@@ -20,3 +20,9 @@ body {
 	font-weight: 300;
 	background: none;
 }
+
+@include media-breakpoint-down(md) {
+	#session-actions {
+		justify-content: end;
+	}
+}

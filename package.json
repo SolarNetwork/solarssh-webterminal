@@ -1,6 +1,6 @@
 {
   "name": "solarssh-webterminal",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "SolarSSH Web Terminal",
   "keywords": [
     "solarnetwork",
@@ -69,7 +69,6 @@
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "bootstrap": "^5.3.6",
-    "bootstrap-icons": "^1.13.1",
     "jquery": "^3.7.1",
     "solarnetwork-api-core": "^3.3.0",
     "xterm-webfont": "^2.0.0"
