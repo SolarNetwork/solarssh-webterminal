@@ -67,6 +67,7 @@ export default class SolarSshApp {
 	#attachAddon?: AttachAddon;
 	#credChangeTimeout?: number;
 	#nodeCredChangeTimeout?: number;
+	#queryInstuctionStatusTimeout?: number;
 	#connectDisabled: boolean = false;
 	#disconnectDisabled: boolean = true;
 
@@ -493,6 +494,9 @@ export default class SolarSshApp {
 	}
 
 	#reset(clear?: boolean) {
+		clearTimeout(this.#queryInstuctionStatusTimeout);
+		this.#queryInstuctionStatusTimeout = undefined;
+
 		this.#resetWebSocket();
 		this.#sshSession = undefined;
 		if (clear) {
@@ -553,9 +557,14 @@ export default class SolarSshApp {
 							"StartRemoteSsh instruction has been declined."
 						);
 					} else {
-						// still waiting... try again in a little bit
-						this.#terminal.write(".");
-						setTimeout(() => executeQuery(), 10000);
+						// still waiting... try again in a little bit, if session still exists
+						if (this.#sshSession) {
+							this.#terminal.write(".");
+							this.#queryInstuctionStatusTimeout = setTimeout(
+								() => executeQuery(),
+								10000
+							);
+						}
 					}
 				})
 				.catch((err) => {
